@@ -1,7 +1,6 @@
 package agents;
 
 import jade.core.Agent;
-import jade.core.AID;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.*;
@@ -10,6 +9,11 @@ import jade.domain.FIPAAgentManagement.*;
  * Flower buyer agent at auction
  */
 public class FlowerBuyerAgent extends Agent{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 7193161857298710501L;
 
 	protected void setup(){
 		//Creating an agent entry on yellow page
