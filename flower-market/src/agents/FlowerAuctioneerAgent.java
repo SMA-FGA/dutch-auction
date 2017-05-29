@@ -30,6 +30,20 @@ public class FlowerAuctioneerAgent extends Agent{
 	  		fe.printStackTrace();
 	  	}
 	  	
+	  	//searh flower buyer agents on df
+	  	DFAgentDescription template = new DFAgentDescription();
+	  	ServiceDescription serviceTemplate = new ServiceDescription();
+	  	serviceTemplate.setType("flower-buyer");
+	  	template.addServices(serviceTemplate);
+	  	try{
+	  		DFAgentDescription[] resultSearch = DFService.search(this, template); //find agents that match with template
+	  		//print founders agents
+	  		for(int i = 0; i < resultSearch.length; i++){
+		  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
+		  	}
+	  	}catch(FIPAException fe){
+	  		fe.printStackTrace();
+	  	}
 	  	
 	}
 	
