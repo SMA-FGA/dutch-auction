@@ -3,16 +3,13 @@ package agents;
 import jade.core.Agent;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
-import jade.domain.FIPAAgentManagement.*;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 
 /**
  * Flower buyer agent at auction
  */
 public class FlowerBuyerAgent extends Agent{
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 7193161857298710501L;
 
 	protected void setup(){
@@ -34,6 +31,14 @@ public class FlowerBuyerAgent extends Agent{
 	  		fe.printStackTrace();
 	  	}
 
+	}
+	
+	protected void takeDown(){
+		try{
+			DFService.deregister(this);
+		}catch(FIPAException fe){
+			fe.printStackTrace();
+		}
 	}
 	
 }
