@@ -1,6 +1,7 @@
 package agents;
 
 import jade.core.Agent;
+import jade.core.behaviours.OneShotBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.*;
@@ -26,32 +27,47 @@ public class FlowerAuctioneerAgent extends Agent{
 	  	try {
 	  		DFService.register(this, agentDescription);
 	  	}
-	  	catch (FIPAException fe) {
-	  		fe.printStackTrace();
+	  	catch (FIPAException exeption) {
+	  		exeption.printStackTrace();
 	  	}
 	  	
-	  	//searh flower buyer agents on df
-	  	DFAgentDescription template = new DFAgentDescription();
-	  	ServiceDescription serviceTemplate = new ServiceDescription();
-	  	serviceTemplate.setType("flower-buyer");
-	  	template.addServices(serviceTemplate);
-	  	try{
-	  		DFAgentDescription[] resultSearch = DFService.search(this, template); //find agents that match with template
-	  		//print founders agents
-	  		for(int i = 0; i < resultSearch.length; i++){
-		  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
-		  	}
-	  	}catch(FIPAException fe){
-	  		fe.printStackTrace();
-	  	}
-	  	
+	  	//adding behaviour to search buyers
+	  	OneShotBehaviour searchBuyersBehaviour = prepareSearchBuyers();
+	  	addBehaviour(searchBuyersBehaviour);
+	}
+	
+	//searh flower buyer agents on df 
+	private OneShotBehaviour prepareSearchBuyers(){
+		OneShotBehaviour searchBuyers = new OneShotBehaviour(){
+			private static final long serialVersionUID = -6394229737886436339L;
+
+			public void action(){
+				//using service template to search 
+			  	DFAgentDescription template = new DFAgentDescription();
+			  	ServiceDescription serviceTemplate = new ServiceDescription();
+			  	serviceTemplate.setType("flower-buyer");
+			  	template.addServices(serviceTemplate);
+			  	
+			  	try{
+			  		DFAgentDescription[] resultSearch = DFService.search(myAgent, template); //find agents that match with template
+			  		//print founders agents
+			  		for(int i = 0; i < resultSearch.length; i++){
+				  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
+				  	}
+			  	}catch(FIPAException exeption){
+			  		exeption.printStackTrace();
+			  	}
+			}
+		};
+		
+		return searchBuyers; 
 	}
 	
 	protected void takeDown(){
 		try{
 			DFService.deregister(this);
-		}catch(FIPAException fe){
-			fe.printStackTrace();
+		}catch(FIPAException exeption){
+			exeption.printStackTrace();
 		}
 	}
 	
