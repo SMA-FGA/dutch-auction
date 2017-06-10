@@ -1,10 +1,12 @@
 package agents;
 
 import jade.core.Agent;
-import jade.core.behaviours.OneShotBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
+import jade.domain.FIPANames;
 import jade.domain.FIPAAgentManagement.*;
+import jade.lang.acl.ACLMessage;
+import jade.proto.AchieveREInitiator;
 
 /**
  * Agent responsible for initiating and conducting the auction
@@ -31,36 +33,32 @@ public class FlowerAuctioneerAgent extends Agent{
 	  		exeption.printStackTrace();
 	  	}
 	  	
-	  	//adding behaviour to search buyers
-	  	OneShotBehaviour searchBuyersBehaviour = prepareSearchBuyers();
-	  	addBehaviour(searchBuyersBehaviour);
-	}
-	
-	//searh flower buyer agents on df 
-	private OneShotBehaviour prepareSearchBuyers(){
-		OneShotBehaviour searchBuyers = new OneShotBehaviour(){
-			private static final long serialVersionUID = -6394229737886436339L;
-
-			public void action(){
-				//using service template to search 
-			  	DFAgentDescription template = new DFAgentDescription();
-			  	ServiceDescription serviceTemplate = new ServiceDescription();
-			  	serviceTemplate.setType("flower-buyer");
-			  	template.addServices(serviceTemplate);
-			  	
-			  	try{
-			  		DFAgentDescription[] resultSearch = DFService.search(myAgent, template); //find agents that match with template
-			  		//print founders agents
-			  		for(int i = 0; i < resultSearch.length; i++){
-				  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
-				  	}
-			  	}catch(FIPAException exeption){
-			  		exeption.printStackTrace();
-			  	}
-			}
-		};
-		
-		return searchBuyers; 
+	  	//searh flower buyer agents on df
+	  	DFAgentDescription template = new DFAgentDescription();
+	  	ServiceDescription serviceTemplate = new ServiceDescription();
+	  	serviceTemplate.setType("flower-buyer");
+	  	template.addServices(serviceTemplate);
+	  	DFAgentDescription[] resultSearch = null; //agents found
+	  	try{
+	  		resultSearch = DFService.search(this, template); //find agents that match with template
+	  		//print founders agents
+	  		for(int i = 0; i < resultSearch.length; i++){
+		  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
+		  	}
+	  	}catch(FIPAException fe){
+	  		fe.printStackTrace();
+	  	}
+	  	
+	  	//Initializing protocol
+	  	ACLMessage inform = new ACLMessage(ACLMessage.INFORM); //mesage that initialize protocol
+	  	//add receivers that were found on df
+	  	for(int i = 0; i < resultSearch.length; i++){
+	  		inform.addReceiver(resultSearch[0].getName());
+	  	}
+	  	inform.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION); //define protocol for interaction
+	  	inform.setContent("the-auction-going-to-start");
+	  	addBehaviour(new DutchInitiator(this, inform)); ////add role of the auctioneer
+	  	
 	}
 	
 	protected void takeDown(){
@@ -71,4 +69,13 @@ public class FlowerAuctioneerAgent extends Agent{
 		}
 	}
 	
+}
+
+//implements the role of the auctioneer in the auction
+class DutchInitiator extends AchieveREInitiator{
+	private static final long serialVersionUID = -2591356594585592411L;
+
+	public DutchInitiator(Agent agent, ACLMessage mensage){
+		super(agent, mensage);
+	}
 }
