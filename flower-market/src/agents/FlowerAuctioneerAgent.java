@@ -39,26 +39,44 @@ public class FlowerAuctioneerAgent extends Agent{
 	  	}
 	  	
 	  	
-	  	//Starting protocol
-	  	this.startAuction(searchAgents());
+	  	Object args[] = getArguments();
+	  	//checks if enough arguments were informed and assigns them to their variables
+	  	if (args != null && args.length >= 2){
+	  		try {
+	  			numberOfFlowers = Integer.parseInt(args[0].toString());
+	  			flowerPrice = Integer.parseInt(args[1].toString());
+	  		} catch (NumberFormatException exception){
+	  			System.out.println("Invalid arguments! Please type in the number of flowers the" +
+	  					" auctioneer agent has, \nthen, after a comma (,), the price of each one -" +
+	  					" both in decimal form.");
+	  		}
 	  	
-	  	addBehaviour(new TickerBehaviour(this, 10000) {
-			private static final long serialVersionUID = 1L;
+	  		//Starting protocol
+	  		this.startAuction(searchAgents());
+	  	
+	  		addBehaviour(new TickerBehaviour(this, 10000) {
+	  			private static final long serialVersionUID = 1L;
 
-			@Override
-			protected void onTick() {
-			  	// if there are flowers, send cfp
-			  	if (numberOfFlowers > 0){
-				  	ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
-				  	cfp.setContent(numberOfFlowers + "," + flowerPrice);
-				  	addReceivers(cfp, searchAgents());
-				  	addBehaviour(new DutchInitiator(myAgent, cfp)); //add role of the auctioneer
-			  	} else {
-			  		doDelete();
-			  	}
-			}
-		});
-	  	
+				@Override
+				protected void onTick() {
+			  		// if there are flowers, send cfp
+			  		if (numberOfFlowers > 0){
+				  		ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+				  		cfp.setContent(numberOfFlowers + "," + flowerPrice);
+				  		addReceivers(cfp, searchAgents());
+				  		addBehaviour(new DutchInitiator(myAgent, cfp)); //add role of the auctioneer
+			  		} else {
+			  			doDelete();
+			  		}
+				}
+	  		});
+	  	} else {
+	  		//not enough arguments informed, kill agent
+  			System.out.println("Not enough arguments informed! Please type in the number of flowers" +
+  					" the auctioneer agent has, \nthen, after a comma (,), the price of each one -" +
+  					" both in decimal form.");
+			doDelete();
+	  	}
 	}
 	
 	/**
