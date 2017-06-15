@@ -15,6 +15,8 @@ import jade.proto.AchieveREResponder;
  */
 public class FlowerBuyerAgent extends Agent{
 	private static final long serialVersionUID = 7193161857298710501L;
+	private int numberOfFlowers = 0; //number of flowers the buyer wants
+	private int flowerPrice = 0; //price they are willing to pay for them
 
 	protected void setup(){
 		//Creating an agent entry on yellow page
@@ -35,12 +37,31 @@ public class FlowerBuyerAgent extends Agent{
 	  		fe.printStackTrace();
 	  	}
 	  	
-	  	//create message template to respond to the protocol
-	  	MessageTemplate protocol = MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
-	  	MessageTemplate perform = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
-	  	MessageTemplate template = MessageTemplate.and(protocol, perform);
-	  	addBehaviour(new DutchResponder(this, template)); //add role of the buyer
-
+	  	
+	  	Object args[] = getArguments();
+	  	//checks if enough arguments were informed and assigns them to their variables
+	  	if (args != null && args.length >= 2){
+	  		try {
+	  			numberOfFlowers = Integer.parseInt(args[0].toString());
+	  			flowerPrice = Integer.parseInt(args[1].toString());
+	  		} catch (NumberFormatException exception){
+	  			System.out.println("Invalid arguments! Please type in the number of flowers the" +
+	  					" buyer agent wants, \nthen, after a comma (,), the price they are willing" +
+	  					" to pay for them - both in decimal form.");
+	  		}
+	  	
+	  		//create message template to respond to the protocol
+	  		MessageTemplate protocol = MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
+	  		MessageTemplate perform = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+	  		MessageTemplate template = MessageTemplate.and(protocol, perform);
+	  		addBehaviour(new DutchResponder(this, template)); //add role of the buyer
+	  	} else {
+	  		//not enough arguments informed, kill agent
+  			System.out.println("Not enough arguments informed! Please type in the number of flowers" +
+  					" the buyer agent wants, \nthen, after a comma (,), the price they are willing" +
+  					" to pay for them - both in decimal form.");
+			doDelete();
+	  	}
 	}
 	
 	protected void takeDown(){
