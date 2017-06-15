@@ -154,8 +154,8 @@ class DutchInitiator extends AchieveREInitiator{
 	}
 	
 	@Override
-	protected Vector prepareRequests(ACLMessage cfp) {
-		Vector requests = new Vector(1);
+	protected Vector<ACLMessage> prepareRequests(ACLMessage cfp) {
+		Vector<ACLMessage> requests = new Vector<ACLMessage>(1);
 	  	cfp.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
 	  	cfp.setConversationId("CFP" + System.currentTimeMillis());
 		requests.addElement(cfp);
