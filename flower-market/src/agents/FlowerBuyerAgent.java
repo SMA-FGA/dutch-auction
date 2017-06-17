@@ -1,6 +1,10 @@
 package agents;
 
+import java.util.Arrays;
+import java.util.List;
+
 import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
@@ -55,6 +59,20 @@ public class FlowerBuyerAgent extends Agent{
 	  		MessageTemplate perform = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
 	  		MessageTemplate template = MessageTemplate.and(protocol, perform);
 	  		addBehaviour(new DutchResponder(this, template)); //add role of the buyer
+	  		addBehaviour(new CyclicBehaviour() {
+				private static final long serialVersionUID = -3436481342609766781L;
+
+				@Override
+				public void action() {
+					MessageTemplate template = MessageTemplate.MatchPerformative(ACLMessage.CFP);
+					ACLMessage message = myAgent.receive(template);
+					if (message != null) {
+						myAgent.send(handleCFP(message));
+					} else {
+						block();
+					}
+				}
+			});
 	  	} else {
 	  		//not enough arguments informed, kill agent
   			System.out.println("Not enough arguments informed! Please type in the number of flowers" +
@@ -70,6 +88,35 @@ public class FlowerBuyerAgent extends Agent{
 		}catch(FIPAException fe){
 			fe.printStackTrace();
 		}
+	}
+	
+	private ACLMessage handleCFP(ACLMessage cfp) {
+		// CFP received. Process it
+		if (cfp != null) {
+			ACLMessage reply = cfp.createReply();
+			
+			/* CFP comes in format 'amountOfFlowers, price'
+			 * We need to split it and convert the values back to integers. 
+			 * */
+			String content = cfp.getContent();
+			List<String> splitContent = Arrays.asList(content.split(","));
+			
+			System.out.println(splitContent.get(0));
+			System.out.println(splitContent.get(1));
+			
+			int flowersAvailable =  Integer.parseInt(splitContent.get(0));
+			int price =  Integer.parseInt(splitContent.get(1));
+			
+			if (flowersAvailable >= numberOfFlowers && price <= flowerPrice) {
+				reply.setPerformative(ACLMessage.PROPOSE);
+				reply.setContent(numberOfFlowers + "," + flowerPrice);
+				return reply;
+			} else {
+				reply.setPerformative(ACLMessage.REFUSE);
+				return reply;
+			}
+		}
+		return null;
 	}
 	
 }
@@ -89,5 +136,5 @@ class DutchResponder extends AchieveREResponder{
 		//System.out.println("ok-i-going-to-participate");
 		return info;
 	}
-	
+
 }
