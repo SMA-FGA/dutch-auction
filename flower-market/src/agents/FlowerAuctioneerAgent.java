@@ -1,8 +1,13 @@
 package agents;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 
+import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.FSMBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
@@ -51,10 +56,8 @@ public class FlowerAuctioneerAgent extends Agent{
 	  					" both in decimal form.");
 	  		}
 	  	
-	  		//Starting protocol
-	  		this.startAuction(searchAgents());
-	  	
-	  		addBehaviour(new TickerBehaviour(this, 10000) {
+	  		// TODO Remove this behaviour from setup and extract as a separate behaviour in the FSM.
+	  		/*addBehaviour(new TickerBehaviour(this, 10000) {
 	  			private static final long serialVersionUID = 1L;
 
 				@Override
@@ -63,13 +66,15 @@ public class FlowerAuctioneerAgent extends Agent{
 			  		if (numberOfFlowers > 0){
 				  		ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
 				  		cfp.setContent(numberOfFlowers + "," + flowerPrice);
-				  		addReceivers(cfp, searchAgents());
+				  		addReceivers(cfp, searchAgents()); 
 				  		addBehaviour(new DutchInitiator(myAgent, cfp)); //add role of the auctioneer
 			  		} else {
 			  			doDelete();
 			  		}
 				}
-	  		});
+	  		});*/
+	  		
+	  		addBehaviour(new FlowerAuctioneerBehaviour());
 	  	} else {
 	  		//not enough arguments informed, kill agent
   			System.out.println("Not enough arguments informed! Please type in the number of flowers" +
@@ -77,30 +82,6 @@ public class FlowerAuctioneerAgent extends Agent{
   					" both in decimal form.");
 			doDelete();
 	  	}
-	}
-	
-	/**
-	 * This method searchs the buyer agents registered on the DF.
-	 * @return DFAgentDescription array of the buyer agents found on the DF.
-	 */
-	protected DFAgentDescription[] searchAgents(){
-		//search flower buyer agents on df
-	  	DFAgentDescription template = new DFAgentDescription();
-	  	ServiceDescription serviceTemplate = new ServiceDescription();
-	  	serviceTemplate.setType("flower-buyer");
-	  	template.addServices(serviceTemplate);
-		DFAgentDescription[] resultSearch = null;
-		try{
-	  		resultSearch = DFService.search(this, template); //find agents that match with template
-	  		//print found agents
-	  		for(int i = 0; i < resultSearch.length; i++){
-		  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
-		  	}
-	  	}catch(FIPAException fe){
-	  		fe.printStackTrace();
-	  	}
-		
-		return resultSearch;
 	}
 	
 	
@@ -117,6 +98,7 @@ public class FlowerAuctioneerAgent extends Agent{
 	  	}
 	}
 	
+	//TODO transform this method into a separate behaviour inside the FSM.
 	/**
 	 * This method informs all agents subscribed to the DF that the auction is 
 	 * going to start. It creates an ACLMessage, adds the agents found on the DF 
@@ -143,6 +125,63 @@ public class FlowerAuctioneerAgent extends Agent{
 		}
 	}
 	
+	private class FlowerAuctioneerBehaviour extends FSMBehaviour {
+		private static final long serialVersionUID = -6043784535465943180L;
+		
+		// Constants for state names
+		private static final String SEARCH_AGENTS = "searching for buyer agents";
+		private static final String END_AUCTION = "ending auction";
+		
+		private List<AID> buyers;
+		
+		public FlowerAuctioneerBehaviour() {
+			buyers = new ArrayList<>();
+			
+			registerFirstState(new SearchAgentsBehaviour(), SEARCH_AGENTS);
+			
+			/* Empty state only to simulate transition. 
+  			 * Will be removed when proper end states are implemented.
+ 			 */
+			registerLastState(new OneShotBehaviour() {
+				private static final long serialVersionUID = 236173643728064163L;
+
+				@Override
+				public void action() {					
+				}
+			}, END_AUCTION);
+			
+			registerDefaultTransition(SEARCH_AGENTS, END_AUCTION);
+		}
+		
+		/**
+		 * This behaviour searches for buyer agents registered on the DF.
+		 * It then stores the found buyers' AIDs in a List for future use.
+		 */
+		private class SearchAgentsBehaviour extends OneShotBehaviour {
+			private static final long serialVersionUID = -8880846336869507985L;
+
+			@Override
+			public void action() {
+				DFAgentDescription template = new DFAgentDescription();
+			  	ServiceDescription serviceTemplate = new ServiceDescription();
+			  	serviceTemplate.setType("flower-buyer");
+			  	template.addServices(serviceTemplate);
+				DFAgentDescription[] resultSearch = null;
+				
+				try {
+			  		resultSearch = DFService.search(myAgent, template); //find agents that match with template
+			  		//print found agents
+			  		for(int i = 0; i < resultSearch.length; i++){
+			  			buyers.add(resultSearch[i].getName());
+				  		System.out.println("Agent:" + resultSearch[i].getName().getLocalName());
+				  	}
+			  	} catch(FIPAException fe){
+			  		fe.printStackTrace();
+			  	}
+			}
+		}
+		
+	}
 }
 
 //implements the role of the auctioneer in the auction
