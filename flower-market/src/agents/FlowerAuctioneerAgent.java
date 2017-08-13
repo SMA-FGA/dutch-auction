@@ -96,26 +96,7 @@ public class FlowerAuctioneerAgent extends Agent{
 		for(int agent = 0; agent < receivers.length; agent++){
 	  		message.addReceiver(receivers[agent].getName());
 	  	}
-	}
-	
-	//TODO transform this method into a separate behaviour inside the FSM.
-	/**
-	 * This method informs all agents subscribed to the DF that the auction is 
-	 * going to start. It creates an ACLMessage, adds the agents found on the DF 
-	 * as its receivers, sets its protocol as the Dutch Auction one and its content,
-	 * then sends it.
-	 * @param receivers The DFAgentDescription array of all agents that are going 
-	 * to receive the message.
-	 */
-	protected void startAuction(DFAgentDescription[] receivers){
-		ACLMessage informStartAuction = new ACLMessage(ACLMessage.INFORM); //message that initialize protocol
-		addReceivers(informStartAuction, receivers); //add receivers that were found on df
-		informStartAuction.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION); //define protocol for interaction
-	  	informStartAuction.setContent("the-auction-is-going-to-start");
-	  	this.send(informStartAuction);
-	}
-	
-	
+	}	
 	
 	protected void takeDown(){
 		try{
@@ -130,6 +111,7 @@ public class FlowerAuctioneerAgent extends Agent{
 		
 		// Constants for state names
 		private static final String SEARCH_AGENTS = "searching for buyer agents";
+		private static final String START_AUCTION = "starting auction";
 		private static final String END_AUCTION = "ending auction";
 		
 		private List<AID> buyers;
@@ -138,6 +120,7 @@ public class FlowerAuctioneerAgent extends Agent{
 			buyers = new ArrayList<>();
 			
 			registerFirstState(new SearchAgentsBehaviour(), SEARCH_AGENTS);
+			registerState(new StartAuctionBehaviour(), START_AUCTION);
 			
 			/* Empty state only to simulate transition. 
   			 * Will be removed when proper end states are implemented.
@@ -150,7 +133,8 @@ public class FlowerAuctioneerAgent extends Agent{
 				}
 			}, END_AUCTION);
 			
-			registerDefaultTransition(SEARCH_AGENTS, END_AUCTION);
+			registerDefaultTransition(SEARCH_AGENTS, START_AUCTION);
+			registerDefaultTransition(START_AUCTION, END_AUCTION);
 		}
 		
 		/**
@@ -181,6 +165,30 @@ public class FlowerAuctioneerAgent extends Agent{
 			}
 		}
 		
+		/**
+		 * This behaviour informs all agents saved in the buyers list that the auction is 
+		 * going to start. It creates an ACLMessage, adds the agents found on the DF 
+		 * as its receivers, sets its protocol as the Dutch Auction one and its content,
+		 * then sends it.
+		 */
+		private class StartAuctionBehaviour extends OneShotBehaviour {
+			private static final long serialVersionUID = -4704356444598692779L;
+
+			@Override
+			public void action() {
+				ACLMessage informStartAuction = new ACLMessage(ACLMessage.INFORM); //message that initialize protocol
+				informStartAuction.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION); //define protocol for interaction
+			  	informStartAuction.setContent("the-auction-is-going-to-start");
+			  	
+				for (AID buyer : buyers) {
+					informStartAuction.addReceiver(buyer); //add receivers that were found on df
+				}
+			  	myAgent.send(informStartAuction);
+			  	
+			  	System.out.println("The auction is about to begin...");
+			}
+			
+		}
 	}
 }
 
