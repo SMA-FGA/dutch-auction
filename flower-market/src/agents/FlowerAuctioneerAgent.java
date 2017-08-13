@@ -8,7 +8,6 @@ import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.FSMBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
-import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
@@ -41,10 +40,10 @@ public class FlowerAuctioneerAgent extends Agent{
 	  	}
 	  	catch (FIPAException exception) {
 	  		exception.printStackTrace();
-	  	}
-	  	
+	  	} 	
 	  	
 	  	Object args[] = getArguments();
+	  	
 	  	//checks if enough arguments were informed and assigns them to their variables
 	  	if (args != null && args.length >= 2){
 	  		try {
@@ -55,24 +54,6 @@ public class FlowerAuctioneerAgent extends Agent{
 	  					" auctioneer agent has, \nthen, after a comma (,), the price of each one -" +
 	  					" both in decimal form.");
 	  		}
-	  	
-	  		// TODO Remove this behaviour from setup and extract as a separate behaviour in the FSM.
-	  		/*addBehaviour(new TickerBehaviour(this, 10000) {
-	  			private static final long serialVersionUID = 1L;
-
-				@Override
-				protected void onTick() {
-			  		// if there are flowers, send cfp
-			  		if (numberOfFlowers > 0){
-				  		ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
-				  		cfp.setContent(numberOfFlowers + "," + flowerPrice);
-				  		addReceivers(cfp, searchAgents()); 
-				  		addBehaviour(new DutchInitiator(myAgent, cfp)); //add role of the auctioneer
-			  		} else {
-			  			doDelete();
-			  		}
-				}
-	  		});*/
 	  		
 	  		addBehaviour(new FlowerAuctioneerBehaviour());
 	  	} else {
@@ -83,20 +64,6 @@ public class FlowerAuctioneerAgent extends Agent{
 			doDelete();
 	  	}
 	}
-	
-	
-	/**
-	 * This method adds the receivers contained in the DFAgentDescription array
-	 * to the ACLMessage received on the parameters.
-	 * @param message the ACLMessage which the receivers are going to be added
-	 * @param receivers the DFAgentDescription array of the agents who are going
-	 * to receive the message.
-	 */
-	protected void addReceivers(ACLMessage message, DFAgentDescription[] receivers){
-		for(int agent = 0; agent < receivers.length; agent++){
-	  		message.addReceiver(receivers[agent].getName());
-	  	}
-	}	
 	
 	protected void takeDown(){
 		try{
@@ -112,6 +79,7 @@ public class FlowerAuctioneerAgent extends Agent{
 		// Constants for state names
 		private static final String SEARCH_AGENTS = "searching for buyer agents";
 		private static final String START_AUCTION = "starting auction";
+		private static final String SEND_CFP = "sending call for proposal";
 		private static final String END_AUCTION = "ending auction";
 		
 		private List<AID> buyers;
@@ -121,6 +89,7 @@ public class FlowerAuctioneerAgent extends Agent{
 			
 			registerFirstState(new SearchAgentsBehaviour(), SEARCH_AGENTS);
 			registerState(new StartAuctionBehaviour(), START_AUCTION);
+			registerState(new CallBuyersBehaviour(), SEND_CFP);
 			
 			/* Empty state only to simulate transition. 
   			 * Will be removed when proper end states are implemented.
@@ -134,7 +103,8 @@ public class FlowerAuctioneerAgent extends Agent{
 			}, END_AUCTION);
 			
 			registerDefaultTransition(SEARCH_AGENTS, START_AUCTION);
-			registerDefaultTransition(START_AUCTION, END_AUCTION);
+			registerDefaultTransition(START_AUCTION, SEND_CFP);
+			registerDefaultTransition(SEND_CFP, END_AUCTION);
 		}
 		
 		/**
@@ -187,7 +157,27 @@ public class FlowerAuctioneerAgent extends Agent{
 			  	
 			  	System.out.println("The auction is about to begin...");
 			}
-			
+		}
+		
+		/*
+		 * This behaviour sends a call for proposal (CFP) to existing buyers.
+		 */
+		private class CallBuyersBehaviour extends OneShotBehaviour {
+			private static final long serialVersionUID = 842469621009798246L;
+
+			@Override
+			public void action() {
+				ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+		  		cfp.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
+			  	cfp.setConversationId("CFP" + System.currentTimeMillis());
+			  	cfp.setContent(numberOfFlowers + "," + flowerPrice);
+		  		
+		  		for (AID buyer : buyers) {
+					cfp.addReceiver(buyer);
+					System.out.println("Sending CFP to [" + buyer.getLocalName() +"]");
+				}
+		  		myAgent.send(cfp);
+			}
 		}
 	}
 }
