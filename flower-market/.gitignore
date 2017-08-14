@@ -4,8 +4,9 @@
 .settings/*
 
 # Binaries
-bin/*
+/bin/
 
 # JADE files
 APDescription.txt
 MTPs-Main-Container.txt
+

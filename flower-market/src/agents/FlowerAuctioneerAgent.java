@@ -66,9 +66,9 @@ public class FlowerAuctioneerAgent extends Agent{
 	}
 	
 	protected void takeDown(){
-		try{
+		try {
 			DFService.deregister(this);
-		}catch(FIPAException exception){
+		} catch(FIPAException exception) {
 			exception.printStackTrace();
 		}
 	}

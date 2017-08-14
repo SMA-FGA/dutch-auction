@@ -5,10 +5,15 @@ import java.util.List;
 
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.FSMBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.NotUnderstoodException;
+import jade.domain.FIPAAgentManagement.RefuseException;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
@@ -53,13 +58,13 @@ public class FlowerBuyerAgent extends Agent{
 	  					" buyer agent wants, \nthen, after a comma (,), the price they are willing" +
 	  					" to pay for them - both in decimal form.");
 	  		}
-	  	
-	  		//create message template to respond to the protocol
-	  		MessageTemplate protocol = MessageTemplate.MatchProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
-	  		MessageTemplate perform = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
-	  		MessageTemplate template = MessageTemplate.and(protocol, perform);
-	  		addBehaviour(new DutchResponder(this, template)); //add role of the buyer
-	  		addBehaviour(new CyclicBehaviour() {
+	  		
+	  		addBehaviour(new FlowerBuyerBehaviour());
+	  		
+	  		
+	  		/* TODO Change this Behaviour from Cyclic to Ticker (or REResponder, maybe)
+	  		 * and move it to the FSM.
+	  		 * addBehaviour(new CyclicBehaviour() {
 				private static final long serialVersionUID = -3436481342609766781L;
 
 				@Override
@@ -72,7 +77,7 @@ public class FlowerBuyerAgent extends Agent{
 						block();
 					}
 				}
-			});
+			});*/
 	  	} else {
 	  		//not enough arguments informed, kill agent
   			System.out.println("Not enough arguments informed! Please type in the number of flowers" +
@@ -90,6 +95,7 @@ public class FlowerBuyerAgent extends Agent{
 		}
 	}
 	
+	// TODO move this method to the CFP receiver after it has been implemented in the FSM.
 	private ACLMessage handleCFP(ACLMessage cfp) {
 		// CFP received. Process it
 		if (cfp != null) {
@@ -119,22 +125,54 @@ public class FlowerBuyerAgent extends Agent{
 		return null;
 	}
 	
-}
-//implements the role of the buyer in the auction
-class DutchResponder extends AchieveREResponder{
-	private static final long serialVersionUID = 9061459035293633648L;
+	private class FlowerBuyerBehaviour extends FSMBehaviour {
+		private static final long serialVersionUID = -7923578069458706584L;	
+		private static final long TICKER_TIME = 5000;
+		
+		// Constants for state names
+		private static final String WAIT_AUCTION = "waiting for auction";
+		private static final String AUCTION_ENDED = "auction ended";
+		
+		public FlowerBuyerBehaviour() {
+			registerFirstState(new WaitAuctionBehaviour(myAgent, TICKER_TIME), WAIT_AUCTION);
+			
+			/* Empty state only to simulate transition. 
+  			 * Will be removed when proper end states are implemented.
+ 			 */
+			registerLastState(new OneShotBehaviour() {
+				private static final long serialVersionUID = 236173643728064163L;
 
-	public DutchResponder(Agent agent, MessageTemplate template){
-		super(agent, template);
-	}
-	
-	//Wait for informs and responds them
-	protected ACLMessage prepareResponse(ACLMessage inform){
-		ACLMessage info = inform.createReply();
-		info.setContent("ok-i-going-to-participate");
-		info.setPerformative(ACLMessage.INFORM);
-		//System.out.println("ok-i-going-to-participate");
-		return info;
-	}
+				@Override
+				public void action() {					
+				}
+			}, AUCTION_ENDED);
+			
+			registerDefaultTransition(WAIT_AUCTION, AUCTION_ENDED);
+		}
+		
+		/*
+		 * This behaviour executes waiting for an Inform from the Auctioneer
+		 * that the auction is about to start.
+		 */
+		private class WaitAuctionBehaviour extends TickerBehaviour {
+			private MessageTemplate informTemplate;
+			
+			public WaitAuctionBehaviour(Agent agent, long period) {
+				super(agent, period);
+				informTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+			}
 
+			private static final long serialVersionUID = 7652201915378925035L;
+
+			@Override
+			protected void onTick() {
+				ACLMessage inform = myAgent.receive(informTemplate);
+				
+				if (inform != null) {
+					System.out.println("Buyer [" + getAID().getLocalName() + "] was informed.");
+					stop();
+				} 
+			}
+		}
+	}
 }
