@@ -4,20 +4,15 @@ import java.util.Arrays;
 import java.util.List;
 
 import jade.core.Agent;
-import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.FSMBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
-import jade.domain.FIPANames;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
-import jade.domain.FIPAAgentManagement.NotUnderstoodException;
-import jade.domain.FIPAAgentManagement.RefuseException;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import jade.proto.AchieveREResponder;
 
 /**
  * Flower buyer agent at auction
@@ -60,24 +55,6 @@ public class FlowerBuyerAgent extends Agent{
 	  		}
 	  		
 	  		addBehaviour(new FlowerBuyerBehaviour());
-	  		
-	  		
-	  		/* TODO Change this Behaviour from Cyclic to Ticker (or REResponder, maybe)
-	  		 * and move it to the FSM.
-	  		 * addBehaviour(new CyclicBehaviour() {
-				private static final long serialVersionUID = -3436481342609766781L;
-
-				@Override
-				public void action() {
-					MessageTemplate template = MessageTemplate.MatchPerformative(ACLMessage.CFP);
-					ACLMessage message = myAgent.receive(template);
-					if (message != null) {
-						myAgent.send(handleCFP(message));
-					} else {
-						block();
-					}
-				}
-			});*/
 	  	} else {
 	  		//not enough arguments informed, kill agent
   			System.out.println("Not enough arguments informed! Please type in the number of flowers" +
@@ -95,46 +72,18 @@ public class FlowerBuyerAgent extends Agent{
 		}
 	}
 	
-	// TODO move this method to the CFP receiver after it has been implemented in the FSM.
-	private ACLMessage handleCFP(ACLMessage cfp) {
-		// CFP received. Process it
-		if (cfp != null) {
-			ACLMessage reply = cfp.createReply();
-			
-			/* CFP comes in format 'amountOfFlowers, price'
-			 * We need to split it and convert the values back to integers. 
-			 * */
-			String content = cfp.getContent();
-			List<String> splitContent = Arrays.asList(content.split(","));
-			
-			System.out.println(splitContent.get(0));
-			System.out.println(splitContent.get(1));
-			
-			int flowersAvailable =  Integer.parseInt(splitContent.get(0));
-			int price =  Integer.parseInt(splitContent.get(1));
-			
-			if (flowersAvailable >= numberOfFlowers && price <= flowerPrice) {
-				reply.setPerformative(ACLMessage.PROPOSE);
-				reply.setContent(numberOfFlowers + "," + flowerPrice);
-				return reply;
-			} else {
-				reply.setPerformative(ACLMessage.REFUSE);
-				return reply;
-			}
-		}
-		return null;
-	}
-	
 	private class FlowerBuyerBehaviour extends FSMBehaviour {
 		private static final long serialVersionUID = -7923578069458706584L;	
-		private static final long TICKER_TIME = 5000;
+		private static final long TICKER_TIME = 1000;
 		
 		// Constants for state names
 		private static final String WAIT_AUCTION = "waiting for auction";
+		private static final String WAIT_CFP = "waiting for cfp";
 		private static final String AUCTION_ENDED = "auction ended";
 		
 		public FlowerBuyerBehaviour() {
 			registerFirstState(new WaitAuctionBehaviour(myAgent, TICKER_TIME), WAIT_AUCTION);
+			registerState(new ReceiveCfpBehaviour(myAgent, TICKER_TIME), WAIT_CFP);
 			
 			/* Empty state only to simulate transition. 
   			 * Will be removed when proper end states are implemented.
@@ -147,7 +96,8 @@ public class FlowerBuyerAgent extends Agent{
 				}
 			}, AUCTION_ENDED);
 			
-			registerDefaultTransition(WAIT_AUCTION, AUCTION_ENDED);
+			registerDefaultTransition(WAIT_AUCTION, WAIT_CFP);
+			registerDefaultTransition(WAIT_CFP, AUCTION_ENDED);
 		}
 		
 		/*
@@ -169,9 +119,54 @@ public class FlowerBuyerAgent extends Agent{
 				ACLMessage inform = myAgent.receive(informTemplate);
 				
 				if (inform != null) {
-					System.out.println("Buyer [" + getAID().getLocalName() + "] was informed.");
+					System.out.println("Buyer [" + getAID().getLocalName() + "] was informed that the auction is"
+							+ "about to start.");
 					stop();
 				} 
+			}
+		}
+		
+		private class ReceiveCfpBehaviour extends TickerBehaviour {
+			private static final long serialVersionUID = 2883648122316563478L;
+			
+			private MessageTemplate cfpTemplate;
+			
+			public ReceiveCfpBehaviour(Agent a, long period) {
+				super(a, period);
+				cfpTemplate = MessageTemplate.MatchPerformative(ACLMessage.CFP);
+			}
+
+			@Override
+			protected void onTick() {
+				ACLMessage receivedMessage = myAgent.receive(cfpTemplate);
+				
+				if (receivedMessage != null) {
+					myAgent.send(handleCfp(receivedMessage));
+					stop();
+				}
+			}
+			
+			private ACLMessage handleCfp(ACLMessage cfp) {
+				ACLMessage reply = cfp.createReply();
+				reply.setInReplyTo(cfp.getConversationId());
+				
+				/* CFP comes in format 'amountOfFlowers, price'
+				 * We need to split it and convert the values back to integers. 
+				 */
+				String content = cfp.getContent();
+				List<String> splitContent = Arrays.asList(content.split(","));
+				
+				int flowersAvailable =  Integer.parseInt(splitContent.get(0));
+				int price =  Integer.parseInt(splitContent.get(1));
+				
+				if (flowersAvailable >= numberOfFlowers && price <= flowerPrice) {
+					reply.setPerformative(ACLMessage.PROPOSE);
+					reply.setContent(numberOfFlowers + "," + flowerPrice);
+					return reply;
+				} else {
+					reply.setPerformative(ACLMessage.REFUSE);
+					return reply;
+				}
 			}
 		}
 	}
