@@ -14,6 +14,7 @@ import jade.domain.FIPANames;
 import jade.domain.FIPAAgentManagement.*;
 import jade.lang.acl.ACLMessage;
 import jade.proto.AchieveREInitiator;
+import jade.proto.ContractNetInitiator;
 
 /**
  * Agent responsible for initiating and conducting the auction
@@ -83,13 +84,14 @@ public class FlowerAuctioneerAgent extends Agent{
 		private static final String END_AUCTION = "ending auction";
 		
 		private List<AID> buyers;
+		private ACLMessage cfp;
 		
 		public FlowerAuctioneerBehaviour() {
 			buyers = new ArrayList<>();
 			
 			registerFirstState(new SearchAgentsBehaviour(), SEARCH_AGENTS);
 			registerState(new StartAuctionBehaviour(), START_AUCTION);
-			registerState(new CallBuyersBehaviour(), SEND_CFP);
+			registerState(new AuctionInteractionBehaviour(myAgent, cfp), SEND_CFP);
 			
 			/* Empty state only to simulate transition. 
   			 * Will be removed when proper end states are implemented.
@@ -159,15 +161,16 @@ public class FlowerAuctioneerAgent extends Agent{
 			}
 		}
 		
-		/*
-		 * This behaviour sends a call for proposal (CFP) to existing buyers.
-		 */
-		private class CallBuyersBehaviour extends OneShotBehaviour {
-			private static final long serialVersionUID = 842469621009798246L;
-
+		private class AuctionInteractionBehaviour extends ContractNetInitiator {
+			private static final long serialVersionUID = 5831124461005530439L;
+			
+			public AuctionInteractionBehaviour(Agent a, ACLMessage cfp) {
+				super(a, cfp);
+			}
+			
 			@Override
-			public void action() {
-				ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+			protected Vector<ACLMessage> prepareCfps(ACLMessage cfp) {
+				cfp = new ACLMessage(ACLMessage.CFP);
 		  		cfp.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
 			  	cfp.setConversationId("CFP" + System.currentTimeMillis());
 			  	cfp.setContent(numberOfFlowers + "," + flowerPrice);
@@ -176,26 +179,13 @@ public class FlowerAuctioneerAgent extends Agent{
 					cfp.addReceiver(buyer);
 					System.out.println("Sending CFP to [" + buyer.getLocalName() +"]");
 				}
-		  		myAgent.send(cfp);
-			}
+		  		
+				Vector<ACLMessage> messages = new Vector<>();
+				messages.addElement(cfp);
+				return messages;
+ 			}
+			
+			
 		}
-	}
-}
-
-//implements the role of the auctioneer in the auction
-class DutchInitiator extends AchieveREInitiator{
-	private static final long serialVersionUID = -2591356594585592411L;
-
-	public DutchInitiator(Agent agent, ACLMessage message){
-		super(agent, message);
-	}
-	
-	@Override
-	protected Vector<ACLMessage> prepareRequests(ACLMessage cfp) {
-		Vector<ACLMessage> requests = new Vector<ACLMessage>(1);
-	  	cfp.setProtocol(FIPANames.InteractionProtocol.FIPA_DUTCH_AUCTION);
-	  	cfp.setConversationId("CFP" + System.currentTimeMillis());
-		requests.addElement(cfp);
-		return requests;
 	}
 }

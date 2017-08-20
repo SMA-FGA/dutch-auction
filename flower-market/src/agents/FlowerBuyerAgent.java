@@ -10,9 +10,13 @@ import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.FailureException;
+import jade.domain.FIPAAgentManagement.NotUnderstoodException;
+import jade.domain.FIPAAgentManagement.RefuseException;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import jade.proto.ContractNetResponder;
 
 /**
  * Flower buyer agent at auction
@@ -81,9 +85,11 @@ public class FlowerBuyerAgent extends Agent{
 		private static final String WAIT_CFP = "waiting for cfp";
 		private static final String AUCTION_ENDED = "auction ended";
 		
+		private MessageTemplate template;
+		
 		public FlowerBuyerBehaviour() {
 			registerFirstState(new WaitAuctionBehaviour(myAgent, TICKER_TIME), WAIT_AUCTION);
-			registerState(new ReceiveCfpBehaviour(myAgent, TICKER_TIME), WAIT_CFP);
+			registerState(new BuyerInteractionBehaviour(myAgent, template), WAIT_CFP);
 			
 			/* Empty state only to simulate transition. 
   			 * Will be removed when proper end states are implemented.
@@ -126,27 +132,17 @@ public class FlowerBuyerAgent extends Agent{
 			}
 		}
 		
-		private class ReceiveCfpBehaviour extends TickerBehaviour {
-			private static final long serialVersionUID = 2883648122316563478L;
+		private class BuyerInteractionBehaviour extends ContractNetResponder {
+			private static final long serialVersionUID = 2376947812341636021L;
 			
-			private MessageTemplate cfpTemplate;
-			
-			public ReceiveCfpBehaviour(Agent a, long period) {
-				super(a, period);
-				cfpTemplate = MessageTemplate.MatchPerformative(ACLMessage.CFP);
+			public BuyerInteractionBehaviour(Agent a, MessageTemplate mt) {
+				super(a, mt);
+				mt = MessageTemplate.MatchPerformative(ACLMessage.CFP);
 			}
-
+			
 			@Override
-			protected void onTick() {
-				ACLMessage receivedMessage = myAgent.receive(cfpTemplate);
-				
-				if (receivedMessage != null) {
-					myAgent.send(handleCfp(receivedMessage));
-					stop();
-				}
-			}
-			
-			private ACLMessage handleCfp(ACLMessage cfp) {
+			protected ACLMessage handleCfp(ACLMessage cfp)
+					throws RefuseException, FailureException, NotUnderstoodException {
 				ACLMessage reply = cfp.createReply();
 				reply.setInReplyTo(cfp.getConversationId());
 				
