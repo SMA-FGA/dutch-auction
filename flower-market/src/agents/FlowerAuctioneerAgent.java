@@ -184,7 +184,35 @@ public class FlowerAuctioneerAgent extends Agent{
 				return messages;
  			}
 			
-			
+			@SuppressWarnings({ "rawtypes", "unchecked" })
+			@Override
+			protected void handleAllResponses(Vector responses, Vector acceptances) {
+				AID roundWinner = null;
+				List<AID> roundLosers = new ArrayList<>();
+				ACLMessage acceptMessage = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+				ACLMessage rejectMessage = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
+				
+				for (Object response : responses) {
+					if (((ACLMessage) response).getPerformative() == ACLMessage.PROPOSE) {
+						if (roundWinner == null) {
+							roundWinner = ((ACLMessage) response).getSender();
+						} else {
+							roundLosers.add(((ACLMessage) response).getSender());
+						}
+					}
+					
+					System.out.println("Buyer [" + ((ACLMessage) response).getSender().getName() + "] answered with "
+							+ ACLMessage.getPerformative(((ACLMessage) response).getPerformative()));
+				}
+				
+				acceptMessage.addReceiver(roundWinner);
+				for (AID loser : roundLosers) {
+					rejectMessage.addReceiver(loser);
+				}
+				
+				acceptances.add(acceptMessage);
+				acceptances.add(rejectMessage);
+			}
 		}
 	}
 }

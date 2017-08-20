@@ -7,7 +7,6 @@ import jade.core.Agent;
 import jade.core.behaviours.FSMBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.SimpleBehaviour;
-import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -79,7 +78,6 @@ public class FlowerBuyerAgent extends Agent{
 	
 	private class FlowerBuyerBehaviour extends FSMBehaviour {
 		private static final long serialVersionUID = -7923578069458706584L;	
-		private static final long TICKER_TIME = 1000;
 		
 		// Constants for state names
 		private static final String WAIT_AUCTION = "waiting for auction";
