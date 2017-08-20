@@ -6,6 +6,7 @@ import java.util.List;
 import jade.core.Agent;
 import jade.core.behaviours.FSMBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.SimpleBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
@@ -88,7 +89,7 @@ public class FlowerBuyerAgent extends Agent{
 		private MessageTemplate template;
 		
 		public FlowerBuyerBehaviour() {
-			registerFirstState(new WaitAuctionBehaviour(myAgent, TICKER_TIME), WAIT_AUCTION);
+			registerFirstState(new WaitAuctionBehaviour(), WAIT_AUCTION);
 			registerState(new BuyerInteractionBehaviour(myAgent, template), WAIT_CFP);
 			
 			/* Empty state only to simulate transition. 
@@ -110,25 +111,30 @@ public class FlowerBuyerAgent extends Agent{
 		 * This behaviour executes waiting for an Inform from the Auctioneer
 		 * that the auction is about to start.
 		 */
-		private class WaitAuctionBehaviour extends TickerBehaviour {
-			private MessageTemplate informTemplate;
-			
-			public WaitAuctionBehaviour(Agent agent, long period) {
-				super(agent, period);
-				informTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
-			}
-
+		private class WaitAuctionBehaviour extends SimpleBehaviour {
 			private static final long serialVersionUID = 7652201915378925035L;
+			
+			private boolean isAtAuction = false;
+			private MessageTemplate informTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+
+
 
 			@Override
-			protected void onTick() {
+			public void action() {
 				ACLMessage inform = myAgent.receive(informTemplate);
-				
+
 				if (inform != null) {
 					System.out.println("Buyer [" + getAID().getLocalName() + "] was informed that the auction is"
-							+ "about to start.");
-					stop();
-				} 
+							+ " about to start.");
+					isAtAuction = true;
+				} else {
+					block();
+				}
+			}
+
+			@Override
+			public boolean done() {
+				return isAtAuction;
 			}
 		}
 		

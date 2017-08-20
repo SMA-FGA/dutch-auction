@@ -13,7 +13,6 @@ import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.domain.FIPAAgentManagement.*;
 import jade.lang.acl.ACLMessage;
-import jade.proto.AchieveREInitiator;
 import jade.proto.ContractNetInitiator;
 
 /**
