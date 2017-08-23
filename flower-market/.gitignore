@@ -1,0 +1,12 @@
+# Eclipse project files
+.classpath
+.project
+.settings/*
+
+# Binaries
+/bin/
+
+# JADE files
+APDescription.txt
+MTPs-Main-Container.txt
+
