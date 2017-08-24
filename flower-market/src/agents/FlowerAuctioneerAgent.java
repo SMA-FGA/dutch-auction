@@ -1,6 +1,7 @@
 package agents;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
@@ -184,7 +185,43 @@ public class FlowerAuctioneerAgent extends Agent{
 				return messages;
  			}
 			
-			
+			@SuppressWarnings({ "rawtypes", "unchecked" })
+			@Override
+			protected void handleAllResponses(Vector responses, Vector acceptances) {
+				List <AID> roundWinners = new ArrayList<>();
+				List<AID> roundLosers = new ArrayList<>();
+				ACLMessage acceptMessage = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+				ACLMessage rejectMessage = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
+				
+				for (Object response : responses) {
+					if (((ACLMessage) response).getPerformative() == ACLMessage.PROPOSE) {
+						String content = ((ACLMessage) response).getContent();
+						List<String> splitContent = Arrays.asList(content.split(","));					
+						int flowersWanted =  Integer.parseInt(splitContent.get(0));
+
+						if (flowersWanted <= numberOfFlowers) {
+							roundWinners.add(((ACLMessage) response).getSender());
+							numberOfFlowers -= flowersWanted;
+						} else {
+							roundLosers.add(((ACLMessage) response).getSender());
+						}
+					}
+					
+					System.out.println("Buyer [" + ((ACLMessage) response).getSender().getName() + "] answered with "
+							+ ACLMessage.getPerformative(((ACLMessage) response).getPerformative()));
+				}
+				
+				for (AID winner : roundWinners) {
+					acceptMessage.addReceiver(winner);
+				}
+				
+				for (AID loser : roundLosers) {
+					rejectMessage.addReceiver(loser);
+				}
+				
+				acceptances.add(acceptMessage);
+				acceptances.add(rejectMessage);
+			}
 		}
 	}
 }
